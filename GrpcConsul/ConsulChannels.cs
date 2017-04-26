@@ -55,11 +55,11 @@ namespace GrpcConsul
                 // a bit hackish
                 var channelFieldInfo = callInvoker.GetType().GetField("channel", BindingFlags.GetField | BindingFlags.NonPublic | BindingFlags.Instance);
                 var channel = (Channel)channelFieldInfo.GetValue(callInvoker);
-                channel.ShutdownAsync();
 
                 // get rid of channel & invoker
                 _channels.Remove(channel.Target);
                 _invokers.Remove(serviceName);
+                channel.ShutdownAsync();
             }
         }
     }
