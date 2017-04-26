@@ -10,8 +10,8 @@ namespace Client
         public static void Main(string[] args)
         {
             var serviceDiscovery = new ServiceDiscovery();
-            var consulChannels = new ConsulChannels(serviceDiscovery);
-            var consulCallInvoker = new ConsulCallInvoker(consulChannels);
+            var consulChannels = new ConsulCallInvoker(serviceDiscovery);
+            var consulCallInvoker = new StickyCallInvoker(consulChannels);
             var client = new Greeter.GreeterClient(consulCallInvoker);
 
             var attempt = 0;

@@ -1,64 +1,67 @@
-﻿using System;
+﻿using System.Collections.Generic;
+using System.Reflection;
 using Grpc.Core;
 
 namespace GrpcConsul
 {
-    public sealed class ConsulCallInvoker : CallInvoker
+    public sealed class ConsulCallInvoker
     {
-        private readonly ConsulChannels _channels;
+        private readonly object _lock = new object();
+        private readonly ServiceDiscovery _serviceDiscovery;
+        private readonly Dictionary<string, DefaultCallInvoker> _invokers = new Dictionary<string, DefaultCallInvoker>();
+        private readonly Dictionary<string, Channel> _channels = new Dictionary<string, Channel>();
 
-        public ConsulCallInvoker(ConsulChannels channels)
+        public ConsulCallInvoker(ServiceDiscovery serviceDiscovery)
         {
-            _channels = channels;
+            _serviceDiscovery = serviceDiscovery;
         }
 
-        private CallInvoker GetCallInvoker(string serviceName)
+        public CallInvoker Get(string serviceName)
         {
-            return _channels.GetOrCreate(serviceName);
-        }
-
-        private TResponse Call<TResponse>(string serviceName, Func<CallInvoker, TResponse> call)
-        {
-            var callInvoker = GetCallInvoker(serviceName);
-            try
+            lock (_lock)
             {
-                return call(callInvoker);
-            }
-            catch (RpcException ex)
-            {
-                // forget channel if unavailable
-                if (ex.Status.StatusCode == StatusCode.Unavailable)
+                // find callInvoker first if any
+                if (_invokers.TryGetValue(serviceName, out DefaultCallInvoker callInvoker))
                 {
-                    _channels.Release(serviceName);
+                    return callInvoker;
                 }
 
-                throw;
+                // find a (shared) channel for target if any
+                var target = _serviceDiscovery.FindServiceEndpoint(serviceName);
+                if (!_channels.TryGetValue(target, out Channel channel))
+                {
+                    channel = new Channel(target, ChannelCredentials.Insecure);
+                    _channels.Add(target, channel);
+                }
+
+                // build a new call invoker + channel
+                callInvoker = new DefaultCallInvoker(channel);
+                _invokers.Add(serviceName, callInvoker);
+                return callInvoker;
             }
         }
 
-        public override TResponse BlockingUnaryCall<TRequest, TResponse>(Method<TRequest, TResponse> method, string host, CallOptions options, TRequest request)
+        public void Revoke(string serviceName)
         {
-            return Call(method.ServiceName, ci => ci.BlockingUnaryCall(method, host, options, request));
-        }
+            lock (_lock)
+            {
+                // find callInvoker first if any
+                if (!_invokers.TryGetValue(serviceName, out DefaultCallInvoker callInvoker))
+                {
+                    return;
+                }
 
-        public override AsyncUnaryCall<TResponse> AsyncUnaryCall<TRequest, TResponse>(Method<TRequest, TResponse> method, string host, CallOptions options, TRequest request)
-        {
-            return Call(method.ServiceName, ci => ci.AsyncUnaryCall(method, host, options, request));
-        }
+                // a bit hackish
+                var channelFieldInfo = callInvoker.GetType().GetField("channel", BindingFlags.GetField | BindingFlags.NonPublic | BindingFlags.Instance);
+                var channel = (Channel) channelFieldInfo.GetValue(callInvoker);
 
-        public override AsyncServerStreamingCall<TResponse> AsyncServerStreamingCall<TRequest, TResponse>(Method<TRequest, TResponse> method, string host, CallOptions options, TRequest request)
-        {
-            return Call(method.ServiceName, ci => ci.AsyncServerStreamingCall(method, host, options, request));
-        }
+                // get rid of channel & invoker
+                _channels.Remove(channel.Target);
+                _invokers.Remove(serviceName);
+                channel.ShutdownAsync();
 
-        public override AsyncClientStreamingCall<TRequest, TResponse> AsyncClientStreamingCall<TRequest, TResponse>(Method<TRequest, TResponse> method, string host, CallOptions options)
-        {
-            return Call(method.ServiceName, ci => ci.AsyncClientStreamingCall(method, host, options));
-        }
-
-        public override AsyncDuplexStreamingCall<TRequest, TResponse> AsyncDuplexStreamingCall<TRequest, TResponse>(Method<TRequest, TResponse> method, string host, CallOptions options)
-        {
-            return Call(method.ServiceName, ci => ci.AsyncDuplexStreamingCall(method, host, options));
+                // TODO: blacklist target for a while
+            }
         }
     }
 }

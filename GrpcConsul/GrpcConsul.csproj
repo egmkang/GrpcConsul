@@ -52,8 +52,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="StickyCallInvoker.cs" />
     <Compile Include="ConsulCallInvoker.cs" />
-    <Compile Include="ConsulChannels.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ServiceDiscovery.cs" />
   </ItemGroup>

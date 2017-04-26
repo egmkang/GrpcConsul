@@ -24,12 +24,24 @@ namespace GrpcConsul
         {
             var hostName = Dns.GetHostName();
             var serviceId = $"{hostName}-{name}-{port}";
+            var checkId = $"{hostName}-{port}";
+
+            var acr = new AgentCheckRegistration
+            {
+                TCP = $"{hostName}:{port}",
+                Name = checkId,
+                ID = checkId,
+                Interval = TimeSpan.FromSeconds(30),
+                DeregisterCriticalServiceAfter = TimeSpan.FromMinutes(1)
+            };
+
             var asr = new AgentServiceRegistration
                           {
                               Address = hostName,
                               ID = serviceId,
                               Name = name,
-                              Port = port
+                              Port = port,
+                              Check = acr,
                           };
 
             var res = _client.Agent.ServiceRegister(asr).Result;
