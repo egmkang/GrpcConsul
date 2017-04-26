@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Linq;
 using System.Net;
+using Consul;
 
-namespace Consul
+namespace GrpcConsul
 {
     public class YellowPages
     {
@@ -14,7 +15,12 @@ namespace Consul
             _client = new ConsulClient();
         }
 
-        public IEntry RegisterService(string name, int port)
+        public string GetHostName()
+        {
+            return Dns.GetHostName();
+        }
+
+        public Entry RegisterService(string name, int port)
         {
             var hostName = Dns.GetHostName();
             var serviceId = $"{hostName}-{name}-{port}";
@@ -59,14 +65,7 @@ namespace Consul
             return $"{service.Address}:{service.Port}";
         }
 
-        public interface IEntry : IDisposable
-        {
-            string ServiceName { get; }
-            int Port { get; }
-            string ServiceId { get; }
-        }
-
-        private class Entry : IEntry
+        public class Entry : IDisposable
         {
             private readonly YellowPages _yellowPages;
 
@@ -78,14 +77,14 @@ namespace Consul
                 _yellowPages = yellowPages;
             }
 
+            public string ServiceName { get; }
+            public int Port { get; }
+            public string ServiceId { get; }
+
             public void Dispose()
             {
                 _yellowPages.UnregisterService(ServiceId);
             }
-
-            public string ServiceName { get; }
-            public int Port { get; }
-            public string ServiceId { get; }
         }
     }
 }

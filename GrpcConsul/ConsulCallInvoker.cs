@@ -1,49 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using System;
 using Grpc.Core;
 
-namespace Consul
+namespace GrpcConsul
 {
-    public class ConsulChannels
-    {
-        private readonly YellowPages _yellowPages;
-        private readonly object _lock = new object();
-        private readonly Dictionary<string, CallInvoker> _channels = new Dictionary<string, CallInvoker>();
-
-        public ConsulChannels(YellowPages yellowPages)
-        {
-            _yellowPages = yellowPages;
-        }
-
-        public CallInvoker Acquire(string serviceName)
-        {
-            lock (_lock)
-            {
-                CallInvoker callInvoker;
-                if (!_channels.TryGetValue(serviceName, out callInvoker))
-                {
-                    var target = _yellowPages.FindServiceEndpoint(serviceName);
-                    var channel = new Channel(target, ChannelCredentials.Insecure);
-                    callInvoker = new DefaultCallInvoker(channel);
-                    _channels.Add(serviceName, callInvoker);
-                }
-
-                return callInvoker;
-            }
-        }
-
-        public void Release(string serviceName)
-        {
-            lock (_lock)
-            {
-                _channels.Remove(serviceName);
-            }
-        }
-
-        public void Shutdown()
-        {
-        }
-    }
-
     public class ConsulCallInvoker : CallInvoker
     {
         private readonly ConsulChannels _channels;
@@ -53,34 +12,53 @@ namespace Consul
             _channels = channels;
         }
 
-        private CallInvoker GetCallInvoker<TRequest, TResponse>(Method<TRequest, TResponse> method)
+        private CallInvoker GetCallInvoker(string serviceName)
         {
-            return _channels.Acquire(method.ServiceName);
+            return _channels.GetOrCreate(serviceName);
+        }
+
+        private TResponse Call<TResponse>(string serviceName, Func<CallInvoker, TResponse> call)
+        {
+            var callInvoker = GetCallInvoker(serviceName);
+            try
+            {
+                return call(callInvoker);
+            }
+            catch (RpcException ex)
+            {
+                // forget channel if 
+                if (ex.Status.StatusCode == StatusCode.Unavailable)
+                {
+                    _channels.Release(serviceName);
+                }
+
+                throw;
+            }
         }
 
         public override TResponse BlockingUnaryCall<TRequest, TResponse>(Method<TRequest, TResponse> method, string host, CallOptions options, TRequest request)
         {
-            return GetCallInvoker(method).BlockingUnaryCall(method, host, options, request);
+            return Call(method.ServiceName, ci => ci.BlockingUnaryCall(method, host, options, request));
         }
 
         public override AsyncUnaryCall<TResponse> AsyncUnaryCall<TRequest, TResponse>(Method<TRequest, TResponse> method, string host, CallOptions options, TRequest request)
         {
-            return GetCallInvoker(method).AsyncUnaryCall(method, host, options, request);
+            return Call(method.ServiceName, ci => ci.AsyncUnaryCall(method, host, options, request));
         }
 
         public override AsyncServerStreamingCall<TResponse> AsyncServerStreamingCall<TRequest, TResponse>(Method<TRequest, TResponse> method, string host, CallOptions options, TRequest request)
         {
-            return GetCallInvoker(method).AsyncServerStreamingCall(method, host, options, request);
+            return Call(method.ServiceName, ci => ci.AsyncServerStreamingCall(method, host, options, request));
         }
 
         public override AsyncClientStreamingCall<TRequest, TResponse> AsyncClientStreamingCall<TRequest, TResponse>(Method<TRequest, TResponse> method, string host, CallOptions options)
         {
-            return GetCallInvoker(method).AsyncClientStreamingCall(method, host, options);
+            return Call(method.ServiceName, ci => ci.AsyncClientStreamingCall(method, host, options));
         }
 
         public override AsyncDuplexStreamingCall<TRequest, TResponse> AsyncDuplexStreamingCall<TRequest, TResponse>(Method<TRequest, TResponse> method, string host, CallOptions options)
         {
-            return GetCallInvoker(method).AsyncDuplexStreamingCall(method, host, options);
+            return Call(method.ServiceName, ci => ci.AsyncDuplexStreamingCall(method, host, options));
         }
     }
 }
