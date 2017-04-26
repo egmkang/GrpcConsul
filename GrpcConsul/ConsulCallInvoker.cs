@@ -26,7 +26,7 @@ namespace GrpcConsul
             }
             catch (RpcException ex)
             {
-                // forget channel if 
+                // forget channel if unavailable
                 if (ex.Status.StatusCode == StatusCode.Unavailable)
                 {
                     _channels.Release(serviceName);

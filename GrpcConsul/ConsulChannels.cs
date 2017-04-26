@@ -27,7 +27,7 @@ namespace GrpcConsul
                     return callInvoker;
                 }
 
-                // find channel for target if any
+                // find a (shared) channel for target if any
                 var target = _yellowPages.FindServiceEndpoint(serviceName);
                 if (! _channels.TryGetValue(target, out Channel channel))
                 {
@@ -60,6 +60,8 @@ namespace GrpcConsul
                 _channels.Remove(channel.Target);
                 _invokers.Remove(serviceName);
                 channel.ShutdownAsync();
+
+                // TODO: blacklist target for a while
             }
         }
     }
