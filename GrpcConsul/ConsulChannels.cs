@@ -1,20 +1,19 @@
 ﻿using System.Collections.Generic;
 using System.Reflection;
-using System.Threading;
 using Grpc.Core;
 
 namespace GrpcConsul
 {
-    public class ConsulChannels
+    public sealed class ConsulChannels
     {
         private readonly object _lock = new object();
-        private readonly YellowPages _yellowPages;
+        private readonly ServiceDiscovery _serviceDiscovery;
         private readonly Dictionary<string, DefaultCallInvoker> _invokers = new Dictionary<string, DefaultCallInvoker>();
         private readonly Dictionary<string, Channel> _channels = new Dictionary<string, Channel>();
 
-        public ConsulChannels(YellowPages yellowPages)
+        public ConsulChannels(ServiceDiscovery serviceDiscovery)
         {
-            _yellowPages = yellowPages;
+            _serviceDiscovery = serviceDiscovery;
         }
 
         public CallInvoker GetOrCreate(string serviceName)
@@ -28,8 +27,8 @@ namespace GrpcConsul
                 }
 
                 // find a (shared) channel for target if any
-                var target = _yellowPages.FindServiceEndpoint(serviceName);
-                if (! _channels.TryGetValue(target, out Channel channel))
+                var target = _serviceDiscovery.FindServiceEndpoint(serviceName);
+                if (!_channels.TryGetValue(target, out Channel channel))
                 {
                     channel = new Channel(target, ChannelCredentials.Insecure);
                     _channels.Add(target, channel);
@@ -54,7 +53,7 @@ namespace GrpcConsul
 
                 // a bit hackish
                 var channelFieldInfo = callInvoker.GetType().GetField("channel", BindingFlags.GetField | BindingFlags.NonPublic | BindingFlags.Instance);
-                var channel = (Channel)channelFieldInfo.GetValue(callInvoker);
+                var channel = (Channel) channelFieldInfo.GetValue(callInvoker);
 
                 // get rid of channel & invoker
                 _channels.Remove(channel.Target);

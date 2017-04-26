@@ -5,12 +5,12 @@ using Consul;
 
 namespace GrpcConsul
 {
-    public class YellowPages
+    public sealed class ServiceDiscovery
     {
         private readonly ConsulClient _client;
         private readonly Random _rnd = new Random();
 
-        public YellowPages()
+        public ServiceDiscovery()
         {
             _client = new ConsulClient();
         }
@@ -65,16 +65,16 @@ namespace GrpcConsul
             return $"{service.Address}:{service.Port}";
         }
 
-        public class Entry : IDisposable
+        public sealed class Entry : IDisposable
         {
-            private readonly YellowPages _yellowPages;
+            private readonly ServiceDiscovery _serviceDiscovery;
 
-            public Entry(YellowPages yellowPages, string serviceName, int port, string serviceId)
+            internal Entry(ServiceDiscovery serviceDiscovery, string serviceName, int port, string serviceId)
             {
                 ServiceName = serviceName;
                 Port = port;
                 ServiceId = serviceId;
-                _yellowPages = yellowPages;
+                _serviceDiscovery = serviceDiscovery;
             }
 
             public string ServiceName { get; }
@@ -83,7 +83,7 @@ namespace GrpcConsul
 
             public void Dispose()
             {
-                _yellowPages.UnregisterService(ServiceId);
+                _serviceDiscovery.UnregisterService(ServiceId);
             }
         }
     }

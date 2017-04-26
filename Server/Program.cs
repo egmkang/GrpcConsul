@@ -19,15 +19,15 @@ namespace Server
         public static void Main(string[] args)
         {
             var port = int.Parse(args[0]);
-            var yellowPages = new YellowPages();
+            var serviceDiscovery = new ServiceDiscovery();
             var server = new Grpc.Core.Server
                              {
                                  Services = { Greeter.BindService(new GreeterImpl()) },
-                                 Ports = { new ServerPort(yellowPages.GetHostName(), port, ServerCredentials.Insecure) }
+                                 Ports = { new ServerPort(serviceDiscovery.GetHostName(), port, ServerCredentials.Insecure) }
                              };
 
             server.Start();
-            using (yellowPages.RegisterService("helloworld.Greeter", port))
+            using (serviceDiscovery.RegisterService("helloworld.Greeter", port))
             {
                 Console.WriteLine("Greeter server listening on port " + port);
                 Console.WriteLine("Press any key to stop the server...");

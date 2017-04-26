@@ -9,14 +9,8 @@ namespace Client
     {
         public static void Main(string[] args)
         {
-            var yellowPages = new YellowPages();
-            for (var i = 0; i < 10; ++i)
-            {
-                var endpoint = yellowPages.FindServiceEndpoint("helloworld.Greeter");
-                Console.WriteLine($"Endpoint: {endpoint}");
-            }
-
-            var consulChannels = new ConsulChannels(yellowPages);
+            var serviceDiscovery = new ServiceDiscovery();
+            var consulChannels = new ConsulChannels(serviceDiscovery);
             var consulCallInvoker = new ConsulCallInvoker(consulChannels);
             var client = new Greeter.GreeterClient(consulCallInvoker);
 

@@ -3,7 +3,7 @@ using Grpc.Core;
 
 namespace GrpcConsul
 {
-    public class ConsulCallInvoker : CallInvoker
+    public sealed class ConsulCallInvoker : CallInvoker
     {
         private readonly ConsulChannels _channels;
 

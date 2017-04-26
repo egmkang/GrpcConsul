@@ -55,7 +55,7 @@
     <Compile Include="ConsulCallInvoker.cs" />
     <Compile Include="ConsulChannels.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="YellowPages.cs" />
+    <Compile Include="ServiceDiscovery.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
