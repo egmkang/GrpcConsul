@@ -8,8 +8,8 @@ namespace GrpcConsul
     {
         private readonly object _lock = new object();
         private readonly ServiceDiscovery _serviceDiscovery;
-        private readonly Dictionary<string, DefaultCallInvoker> _invokers = new Dictionary<string, DefaultCallInvoker>();
         private readonly Dictionary<string, Channel> _channels = new Dictionary<string, Channel>();
+        private readonly Dictionary<string, DefaultCallInvoker> _invokers = new Dictionary<string, DefaultCallInvoker>();
 
         public StickyEndpointStrategy(ServiceDiscovery serviceDiscovery)
         {
@@ -21,14 +21,14 @@ namespace GrpcConsul
             lock (_lock)
             {
                 // find callInvoker first if any
-                if (_invokers.TryGetValue(serviceName, out DefaultCallInvoker callInvoker))
+                if (_invokers.TryGetValue(serviceName, out var callInvoker))
                 {
                     return callInvoker;
                 }
 
                 // find a (shared) channel for target if any
                 var target = _serviceDiscovery.FindServiceEndpoint(serviceName);
-                if (!_channels.TryGetValue(target, out Channel channel))
+                if (!_channels.TryGetValue(target, out var channel))
                 {
                     channel = new Channel(target, ChannelCredentials.Insecure);
                     _channels.Add(target, channel);
@@ -46,7 +46,7 @@ namespace GrpcConsul
             lock (_lock)
             {
                 // find callInvoker first if any
-                if (!_invokers.TryGetValue(serviceName, out DefaultCallInvoker callInvoker))
+                if (!_invokers.TryGetValue(serviceName, out var callInvoker))
                 {
                     return;
                 }
@@ -56,9 +56,9 @@ namespace GrpcConsul
                 var channel = (Channel) channelFieldInfo.GetValue(callInvoker);
 
                 // get rid of channel & invoker
+                _serviceDiscovery.Blacklist(channel.Target);
                 _channels.Remove(channel.Target);
                 _invokers.Remove(serviceName);
-                _serviceDiscovery.Blacklist(channel.Target);
                 channel.ShutdownAsync();
             }
         }
