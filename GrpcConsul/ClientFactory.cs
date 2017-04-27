@@ -8,7 +8,7 @@ namespace GrpcConsul
 
         public ClientFactory(IEndpointStrategy strategy)
         {
-            _callInvoker = new EndpointCallInvoker(strategy);
+            _callInvoker = new EndpointCallInvoker(strategy, 1);
         }
 
         public T Get<T>()

@@ -6,54 +6,62 @@ namespace GrpcConsul
     internal sealed class EndpointCallInvoker : CallInvoker
     {
         private readonly IEndpointStrategy _endpointStrategy;
+        private readonly int _maxRetry;
 
-        public EndpointCallInvoker(IEndpointStrategy endpointStrategy)
+        public EndpointCallInvoker(IEndpointStrategy endpointStrategy, int maxRetry = 0)
         {
             _endpointStrategy = endpointStrategy;
+            _maxRetry = maxRetry;
         }
 
-        private TResponse Call<TResponse>(string serviceName, Func<CallInvoker, TResponse> call)
+        private TResponse Call<TResponse>(string serviceName, Func<CallInvoker, TResponse> call, int retryLeft)
         {
-            var callInvoker = _endpointStrategy.Get(serviceName);
-            try
+            while (true)
             {
-                return call(callInvoker);
-            }
-            catch (RpcException ex)
-            {
-                // forget channel if unavailable
-                if (ex.Status.StatusCode == StatusCode.Unavailable)
+                var callInvoker = _endpointStrategy.Get(serviceName);
+                try
                 {
-                    _endpointStrategy.Revoke(serviceName);
+                    return call(callInvoker);
                 }
+                catch (RpcException ex)
+                {
+                    // forget channel if unavailable
+                    if (ex.Status.StatusCode == StatusCode.Unavailable)
+                    {
+                        _endpointStrategy.Revoke(serviceName);
+                    }
 
-                throw;
+                    if (0 > --retryLeft)
+                    {
+                        throw;
+                    }
+                }
             }
         }
 
         public override TResponse BlockingUnaryCall<TRequest, TResponse>(Method<TRequest, TResponse> method, string host, CallOptions options, TRequest request)
         {
-            return Call(method.ServiceName, ci => ci.BlockingUnaryCall(method, host, options, request));
+            return Call(method.ServiceName, ci => ci.BlockingUnaryCall(method, host, options, request), _maxRetry);
         }
 
         public override AsyncUnaryCall<TResponse> AsyncUnaryCall<TRequest, TResponse>(Method<TRequest, TResponse> method, string host, CallOptions options, TRequest request)
         {
-            return Call(method.ServiceName, ci => ci.AsyncUnaryCall(method, host, options, request));
+            return Call(method.ServiceName, ci => ci.AsyncUnaryCall(method, host, options, request), _maxRetry);
         }
 
         public override AsyncServerStreamingCall<TResponse> AsyncServerStreamingCall<TRequest, TResponse>(Method<TRequest, TResponse> method, string host, CallOptions options, TRequest request)
         {
-            return Call(method.ServiceName, ci => ci.AsyncServerStreamingCall(method, host, options, request));
+            return Call(method.ServiceName, ci => ci.AsyncServerStreamingCall(method, host, options, request), _maxRetry);
         }
 
         public override AsyncClientStreamingCall<TRequest, TResponse> AsyncClientStreamingCall<TRequest, TResponse>(Method<TRequest, TResponse> method, string host, CallOptions options)
         {
-            return Call(method.ServiceName, ci => ci.AsyncClientStreamingCall(method, host, options));
+            return Call(method.ServiceName, ci => ci.AsyncClientStreamingCall(method, host, options), _maxRetry);
         }
 
         public override AsyncDuplexStreamingCall<TRequest, TResponse> AsyncDuplexStreamingCall<TRequest, TResponse>(Method<TRequest, TResponse> method, string host, CallOptions options)
         {
-            return Call(method.ServiceName, ci => ci.AsyncDuplexStreamingCall(method, host, options));
+            return Call(method.ServiceName, ci => ci.AsyncDuplexStreamingCall(method, host, options), _maxRetry);
         }
     }
 }
