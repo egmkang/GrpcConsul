@@ -17,8 +17,7 @@ namespace Client
             while (true)
             {
                 ++attempt;
-                Console.WriteLine($"=== Attempt {attempt} (Press any key) ===");
-                Console.ReadKey();
+                Console.WriteLine($"=== Attempt {attempt} ===");
 
                 try
                 {
@@ -29,6 +28,8 @@ namespace Client
                 {
                     Console.WriteLine($"Failure: {ex.Message}");
                 }
+
+                System.Threading.Thread.Sleep(1 * 1000);
             }
         }
     }

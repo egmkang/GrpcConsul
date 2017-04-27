@@ -30,9 +30,9 @@ namespace Server
             server.Start();
             using (serviceDiscovery.RegisterService(Greeter.Descriptor.FullName, port))
             {
-                Console.WriteLine($"Greeter server listening on port {port}");
-                Console.WriteLine("Press any key to stop the server...");
-                Console.ReadKey();
+                Console.WriteLine($"{Greeter.Descriptor.FullName} service listening on port {port}");
+                Console.WriteLine("Press ENTER to exit");
+                Console.ReadLine();
             }
 
             server.ShutdownAsync().Wait();
