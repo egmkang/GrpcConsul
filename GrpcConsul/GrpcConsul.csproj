@@ -52,6 +52,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ConsulConfig.cs" />
     <Compile Include="StickyCallInvoker.cs" />
     <Compile Include="ConsulCallInvoker.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

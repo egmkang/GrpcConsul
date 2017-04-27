@@ -1,5 +1,4 @@
 ﻿using System;
-using Grpc.Core;
 using GrpcConsul;
 using Helloworld;
 
@@ -18,16 +17,17 @@ namespace Client
             while (true)
             {
                 ++attempt;
+                Console.WriteLine($"=== Attempt {attempt} (Press any key) ===");
+                Console.ReadKey();
 
                 try
                 {
                     var reply = client.SayHello(new HelloRequest { Name = $"Attempt {attempt}" });
-                    Console.WriteLine("Greeting: " + reply.Message);
-                    Console.ReadLine();
+                    Console.WriteLine($"Success: {reply.Message}");
                 }
-                catch (RpcException ex)
+                catch (Exception ex)
                 {
-                    Console.WriteLine($"Failed with error {ex}");
+                    Console.WriteLine($"Failure: {ex.Message}");
                 }
             }
         }

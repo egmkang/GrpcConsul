@@ -1,7 +1,9 @@
-# POC for Grpc + Consul
+# Sample for Grpc + Consul
 
   * Server register a service in Consul
   * Client tries to invoke a service with Consul as resolver
+  * Services are checked by Consul
+  * Client can blacklist endpoints for a while
 
 # How to run ?
 

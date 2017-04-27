@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using Consul;
@@ -9,6 +11,7 @@ namespace GrpcConsul
     {
         private readonly ConsulClient _client;
         private readonly Random _rnd = new Random();
+        private readonly ConcurrentDictionary<string, DateTime> _blacklist = new ConcurrentDictionary<string, DateTime>();
 
         public ServiceDiscovery()
         {
@@ -31,8 +34,8 @@ namespace GrpcConsul
                 TCP = $"{hostName}:{port}",
                 Name = checkId,
                 ID = checkId,
-                Interval = TimeSpan.FromSeconds(30),
-                DeregisterCriticalServiceAfter = TimeSpan.FromMinutes(1)
+                Interval = ConsulConfig.CheckInterval,
+                DeregisterCriticalServiceAfter = ConsulConfig.CriticalInterval
             };
 
             var asr = new AgentServiceRegistration
@@ -66,15 +69,39 @@ namespace GrpcConsul
                 throw new ApplicationException($"Failed to query services");
             }
 
-            var services = res.Response.Values.Where(x => x.Service == name).ToArray();
-            if (0 == services.Length)
+            var now = DateTime.UtcNow;
+            var targets = res.Response
+                             .Values
+                             .Where(x => x.Service == name)
+                             .Select(x => $"{x.Address}:{x.Port}")
+                            . ToList();
+            while (0 < targets.Count)
             {
-                throw new ApplicationException($"Can't find service {name}");
+                var rnd = _rnd.Next(targets.Count);
+                var target = targets[rnd];
+                if (_blacklist.TryGetValue(target, out DateTime lastFailure))
+                {
+                    // within blacklist period ?
+                    if (now - lastFailure < ConsulConfig.BlacklistPeriod)
+                    {
+                        targets.RemoveAt(rnd);
+                        continue;
+                    }
+
+                    // blacklist timeout elapsed
+                    _blacklist.TryRemove(target, out lastFailure);
+                }
+
+                return target;
             }
 
-            var rnd = _rnd.Next(services.Length);
-            var service = services[rnd];
-            return $"{service.Address}:{service.Port}";
+            throw new ApplicationException($"Can't find service {name}");
+        }
+
+        public void Blacklist(string target)
+        {
+            var now = DateTime.UtcNow;
+            _blacklist.AddOrUpdate(target, k => now, (k, old) => now);
         }
 
         public sealed class Entry : IDisposable
