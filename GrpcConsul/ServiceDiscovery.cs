@@ -10,7 +10,6 @@ namespace GrpcConsul
     public sealed class ServiceDiscovery
     {
         private readonly ConsulClient _client;
-        private readonly Random _rnd = new Random();
         private readonly ConcurrentDictionary<string, DateTime> _blacklist = new ConcurrentDictionary<string, DateTime>();
 
         public ServiceDiscovery()
@@ -69,6 +68,7 @@ namespace GrpcConsul
                 throw new ApplicationException($"Failed to query services");
             }
 
+            var rnd = new Random();
             var now = DateTime.UtcNow;
             var targets = res.Response
                              .Values
@@ -77,14 +77,14 @@ namespace GrpcConsul
                             . ToList();
             while (0 < targets.Count)
             {
-                var rnd = _rnd.Next(targets.Count);
-                var target = targets[rnd];
+                var choice = rnd.Next(targets.Count);
+                var target = targets[choice];
                 if (_blacklist.TryGetValue(target, out DateTime lastFailure))
                 {
                     // within blacklist period ?
                     if (now - lastFailure < ConsulConfig.BlacklistPeriod)
                     {
-                        targets.RemoveAt(rnd);
+                        targets.RemoveAt(choice);
                         continue;
                     }
 
