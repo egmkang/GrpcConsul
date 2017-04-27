@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Reflection;
 using Grpc.Core;
 
@@ -58,9 +59,8 @@ namespace GrpcConsul
                 // get rid of channel & invoker
                 _channels.Remove(channel.Target);
                 _invokers.Remove(serviceName);
+                _serviceDiscovery.Blacklist(channel.Target);
                 channel.ShutdownAsync();
-
-                // TODO: blacklist target for a while
             }
         }
     }
