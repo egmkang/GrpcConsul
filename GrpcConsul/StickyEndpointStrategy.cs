@@ -1,18 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Reflection;
 using Grpc.Core;
 
 namespace GrpcConsul
 {
-    public sealed class ConsulCallInvoker
+    public class StickyEndpointStrategy : IEndpointStrategy
     {
         private readonly object _lock = new object();
         private readonly ServiceDiscovery _serviceDiscovery;
         private readonly Dictionary<string, DefaultCallInvoker> _invokers = new Dictionary<string, DefaultCallInvoker>();
         private readonly Dictionary<string, Channel> _channels = new Dictionary<string, Channel>();
 
-        public ConsulCallInvoker(ServiceDiscovery serviceDiscovery)
+        public StickyEndpointStrategy(ServiceDiscovery serviceDiscovery)
         {
             _serviceDiscovery = serviceDiscovery;
         }

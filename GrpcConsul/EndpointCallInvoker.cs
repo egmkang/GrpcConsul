@@ -3,23 +3,18 @@ using Grpc.Core;
 
 namespace GrpcConsul
 {
-    public sealed class StickyCallInvoker : CallInvoker
+    internal sealed class EndpointCallInvoker : CallInvoker
     {
-        private readonly ConsulCallInvoker _callInvoker;
+        private readonly IEndpointStrategy _endpointStrategy;
 
-        public StickyCallInvoker(ConsulCallInvoker callInvoker)
+        public EndpointCallInvoker(IEndpointStrategy endpointStrategy)
         {
-            _callInvoker = callInvoker;
-        }
-
-        private CallInvoker GetCallInvoker(string serviceName)
-        {
-            return _callInvoker.Get(serviceName);
+            _endpointStrategy = endpointStrategy;
         }
 
         private TResponse Call<TResponse>(string serviceName, Func<CallInvoker, TResponse> call)
         {
-            var callInvoker = GetCallInvoker(serviceName);
+            var callInvoker = _endpointStrategy.Get(serviceName);
             try
             {
                 return call(callInvoker);
@@ -29,7 +24,7 @@ namespace GrpcConsul
                 // forget channel if unavailable
                 if (ex.Status.StatusCode == StatusCode.Unavailable)
                 {
-                    _callInvoker.Revoke(serviceName);
+                    _endpointStrategy.Revoke(serviceName);
                 }
 
                 throw;

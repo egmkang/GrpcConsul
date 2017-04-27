@@ -26,10 +26,11 @@ namespace Server
                                  Ports = { new ServerPort(serviceDiscovery.GetHostName(), port, ServerCredentials.Insecure) }
                              };
 
+
             server.Start();
-            using (serviceDiscovery.RegisterService("helloworld.Greeter", port))
+            using (serviceDiscovery.RegisterService(Greeter.Descriptor.FullName, port))
             {
-                Console.WriteLine("Greeter server listening on port " + port);
+                Console.WriteLine($"Greeter server listening on port {port}");
                 Console.WriteLine("Press any key to stop the server...");
                 Console.ReadKey();
             }

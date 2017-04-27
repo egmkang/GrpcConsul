@@ -9,9 +9,9 @@ namespace Client
         public static void Main(string[] args)
         {
             var serviceDiscovery = new ServiceDiscovery();
-            var consulChannels = new ConsulCallInvoker(serviceDiscovery);
-            var consulCallInvoker = new StickyCallInvoker(consulChannels);
-            var client = new Greeter.GreeterClient(consulCallInvoker);
+            var endpointStrategy = new StickyEndpointStrategy(serviceDiscovery);
+            var clientFactory = new ClientFactory(endpointStrategy);
+            var client = clientFactory.Get<Greeter.GreeterClient>();
 
             var attempt = 0;
             while (true)

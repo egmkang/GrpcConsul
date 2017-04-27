@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using Consul;
@@ -29,13 +28,13 @@ namespace GrpcConsul
             var checkId = $"{hostName}-{port}";
 
             var acr = new AgentCheckRegistration
-            {
-                TCP = $"{hostName}:{port}",
-                Name = checkId,
-                ID = checkId,
-                Interval = ConsulConfig.CheckInterval,
-                DeregisterCriticalServiceAfter = ConsulConfig.CriticalInterval
-            };
+                          {
+                              TCP = $"{hostName}:{port}",
+                              Name = checkId,
+                              ID = checkId,
+                              Interval = ConsulConfig.CheckInterval,
+                              DeregisterCriticalServiceAfter = ConsulConfig.CriticalInterval
+                          };
 
             var asr = new AgentServiceRegistration
                           {
@@ -43,7 +42,7 @@ namespace GrpcConsul
                               ID = serviceId,
                               Name = name,
                               Port = port,
-                              Check = acr,
+                              Check = acr
                           };
 
             var res = _client.Agent.ServiceRegister(asr).Result;
@@ -74,7 +73,7 @@ namespace GrpcConsul
                              .Values
                              .Where(x => x.Service == name)
                              .Select(x => $"{x.Address}:{x.Port}")
-                            . ToList();
+                             .ToList();
             while (0 < targets.Count)
             {
                 var choice = rnd.Next(targets.Count);
