@@ -4,6 +4,7 @@
   * Client tries to invoke a service with Consul as resolver
   * Services are checked by Consul
   * Client can blacklist endpoints for a while and recover then
+  * Client can choose an endpoint strategy and retry
 
 # How to run ?
 
