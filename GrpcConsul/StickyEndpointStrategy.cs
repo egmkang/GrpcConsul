@@ -71,9 +71,9 @@ namespace GrpcConsul
                 if(_channels.TryGetValue(failedChannel.Target, out var channel) && ReferenceEquals(channel, failedChannel))
                 {
                     _channels.Remove(failedChannel.Target);
+                    _serviceDiscovery.Blacklist(failedChannel.Target);
                 }
 
-                _serviceDiscovery.Blacklist(failedChannel.Target);
                 failedChannel.ShutdownAsync();
             }
         }
