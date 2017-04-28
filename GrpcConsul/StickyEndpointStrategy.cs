@@ -30,7 +30,7 @@ namespace GrpcConsul
             // no luck (slow path): either no call invoker available or a shutdown is in progress
             lock (_lock)
             {
-                // since can be considered a double-check lock
+                // this is double-check lock
                 if (_invokers.TryGetValue(serviceName, out callInvoker))
                 {
                     return callInvoker;
@@ -38,7 +38,6 @@ namespace GrpcConsul
 
                 // find a (shared) channel for target if any
                 var target = _serviceDiscovery.FindServiceEndpoint(serviceName);
-
                 if (!_channels.TryGetValue(target, out var channel))
                 {
                     channel = new Channel(target, ChannelCredentials.Insecure);
@@ -57,25 +56,25 @@ namespace GrpcConsul
         {
             lock (_lock)
             {
-                // only destroy the call invoker if & only if it is still published
+                // only destroy the call invoker if & only if it is still published (first arrived wins)
                 if (!_invokers.TryGetValue(serviceName, out var callInvoker) || !ReferenceEquals(callInvoker, failedCallInvoker))
                 {
                     return;
                 }
+                _invokers.TryRemove(serviceName, out callInvoker);
 
                 // a bit hackish
                 var channelFieldInfo = failedCallInvoker.GetType().GetField("channel", BindingFlags.GetField | BindingFlags.NonPublic | BindingFlags.Instance);
                 var failedChannel = (Channel) channelFieldInfo.GetValue(failedCallInvoker);
 
-                // shutdown the channel - this must be done once
+                // shutdown the channel
                 if(_channels.TryGetValue(failedChannel.Target, out var channel) && ReferenceEquals(channel, failedChannel))
                 {
-                    _channels.Remove(channel.Target);
-                    channel.ShutdownAsync();
+                    _channels.Remove(failedChannel.Target);
                 }
 
-                _invokers.TryRemove(serviceName, out callInvoker);
-                _serviceDiscovery.Blacklist(channel.Target);
+                _serviceDiscovery.Blacklist(failedChannel.Target);
+                failedChannel.ShutdownAsync();
             }
         }
     }
