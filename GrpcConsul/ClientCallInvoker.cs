@@ -3,12 +3,12 @@ using Grpc.Core;
 
 namespace GrpcConsul
 {
-    internal sealed class EndpointCallInvoker : CallInvoker
+    internal sealed class ClientCallInvoker : CallInvoker
     {
         private readonly IEndpointStrategy _endpointStrategy;
         private readonly int _maxRetry;
 
-        public EndpointCallInvoker(IEndpointStrategy endpointStrategy, int maxRetry = 0)
+        public ClientCallInvoker(IEndpointStrategy endpointStrategy, int maxRetry = 0)
         {
             _endpointStrategy = endpointStrategy;
             _maxRetry = maxRetry;
@@ -28,7 +28,7 @@ namespace GrpcConsul
                     // forget channel if unavailable
                     if (ex.Status.StatusCode == StatusCode.Unavailable)
                     {
-                        _endpointStrategy.Revoke(serviceName);
+                        _endpointStrategy.Revoke(serviceName, callInvoker);
                     }
 
                     if (0 > --retryLeft)

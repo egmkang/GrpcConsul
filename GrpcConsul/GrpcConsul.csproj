@@ -55,7 +55,7 @@
     <Compile Include="ClientFactory.cs" />
     <Compile Include="ConsulConfig.cs" />
     <Compile Include="IEndpointStrategy.cs" />
-    <Compile Include="EndpointCallInvoker.cs" />
+    <Compile Include="ClientCallInvoker.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ServiceDiscovery.cs" />
     <Compile Include="StickyEndpointStrategy.cs" />
