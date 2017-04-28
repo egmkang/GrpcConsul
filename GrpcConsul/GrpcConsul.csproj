@@ -54,6 +54,7 @@
   <ItemGroup>
     <Compile Include="ClientFactory.cs" />
     <Compile Include="ConsulConfig.cs" />
+    <Compile Include="ServerCallInvoker.cs" />
     <Compile Include="IEndpointStrategy.cs" />
     <Compile Include="ClientCallInvoker.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

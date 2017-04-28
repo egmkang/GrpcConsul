@@ -1,17 +1,14 @@
-﻿using System;
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Reflection;
 using Grpc.Core;
 
 namespace GrpcConsul
 {
     public class StickyEndpointStrategy : IEndpointStrategy
     {
-        private readonly ServiceDiscovery _serviceDiscovery;
-        private readonly ConcurrentDictionary<string, DefaultCallInvoker> _invokers = new ConcurrentDictionary<string, DefaultCallInvoker>();
-
         private readonly object _lock = new object();
+        private readonly ServiceDiscovery _serviceDiscovery;
+        private readonly ConcurrentDictionary<string, ServerCallInvoker> _invokers = new ConcurrentDictionary<string, ServerCallInvoker>();
         private readonly Dictionary<string, Channel> _channels = new Dictionary<string, Channel>();
 
         public StickyEndpointStrategy(ServiceDiscovery serviceDiscovery)
@@ -19,7 +16,7 @@ namespace GrpcConsul
             _serviceDiscovery = serviceDiscovery;
         }
 
-        public CallInvoker Get(string serviceName)
+        public ServerCallInvoker Get(string serviceName)
         {
             // find callInvoker first if any (fast path)
             if (_invokers.TryGetValue(serviceName, out var callInvoker))
@@ -45,14 +42,14 @@ namespace GrpcConsul
                 }
 
                 // build a new call invoker + channel
-                callInvoker = new DefaultCallInvoker(channel);
+                callInvoker = new ServerCallInvoker(channel);
                 _invokers.TryAdd(serviceName, callInvoker);
 
                 return callInvoker;
             }
         }
 
-        public void Revoke(string serviceName, CallInvoker failedCallInvoker)
+        public void Revoke(string serviceName, ServerCallInvoker failedCallInvoker)
         {
             lock (_lock)
             {
@@ -63,12 +60,9 @@ namespace GrpcConsul
                 }
                 _invokers.TryRemove(serviceName, out callInvoker);
 
-                // a bit hackish
-                var channelFieldInfo = failedCallInvoker.GetType().GetField("channel", BindingFlags.GetField | BindingFlags.NonPublic | BindingFlags.Instance);
-                var failedChannel = (Channel) channelFieldInfo.GetValue(failedCallInvoker);
-
                 // shutdown the channel
-                if(_channels.TryGetValue(failedChannel.Target, out var channel) && ReferenceEquals(channel, failedChannel))
+                var failedChannel = failedCallInvoker.Channel;
+                if (_channels.TryGetValue(failedChannel.Target, out var channel) && ReferenceEquals(channel, failedChannel))
                 {
                     _channels.Remove(failedChannel.Target);
                     _serviceDiscovery.Blacklist(failedChannel.Target);

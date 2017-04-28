@@ -1,10 +1,8 @@
-﻿using Grpc.Core;
-
-namespace GrpcConsul
+﻿namespace GrpcConsul
 {
     public interface IEndpointStrategy
     {
-        CallInvoker Get(string serviceName);
-        void Revoke(string serviceName, CallInvoker failedCallInvoker);
+        ServerCallInvoker Get(string serviceName);
+        void Revoke(string serviceName, ServerCallInvoker failedCallInvoker);
     }
 }
