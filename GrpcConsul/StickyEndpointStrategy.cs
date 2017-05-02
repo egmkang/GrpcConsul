@@ -19,7 +19,8 @@ namespace GrpcConsul
         public ServerCallInvoker Get(string serviceName)
         {
             // find callInvoker first if any (fast path)
-            if (_invokers.TryGetValue(serviceName, out var callInvoker))
+            ServerCallInvoker callInvoker;
+            if (_invokers.TryGetValue(serviceName, out callInvoker))
             {
                 return callInvoker;
             }
@@ -35,7 +36,8 @@ namespace GrpcConsul
 
                 // find a (shared) channel for target if any
                 var target = _serviceDiscovery.FindServiceEndpoint(serviceName);
-                if (!_channels.TryGetValue(target, out var channel))
+                Channel channel;
+                if (!_channels.TryGetValue(target, out channel))
                 {
                     channel = new Channel(target, ChannelCredentials.Insecure);
                     _channels.Add(target, channel);
@@ -54,7 +56,8 @@ namespace GrpcConsul
             lock (_lock)
             {
                 // only destroy the call invoker if & only if it is still published (first arrived wins)
-                if (!_invokers.TryGetValue(serviceName, out var callInvoker) || !ReferenceEquals(callInvoker, failedCallInvoker))
+                ServerCallInvoker callInvoker;
+                if (!_invokers.TryGetValue(serviceName, out callInvoker) || !ReferenceEquals(callInvoker, failedCallInvoker))
                 {
                     return;
                 }
@@ -62,7 +65,8 @@ namespace GrpcConsul
 
                 // shutdown the channel
                 var failedChannel = failedCallInvoker.Channel;
-                if (_channels.TryGetValue(failedChannel.Target, out var channel) && ReferenceEquals(channel, failedChannel))
+                Channel channel;
+                if (_channels.TryGetValue(failedChannel.Target, out channel) && ReferenceEquals(channel, failedChannel))
                 {
                     _channels.Remove(failedChannel.Target);
                     _serviceDiscovery.Blacklist(failedChannel.Target);

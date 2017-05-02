@@ -78,7 +78,8 @@ namespace GrpcConsul
             {
                 var choice = rnd.Next(targets.Count);
                 var target = targets[choice];
-                if (_blacklist.TryGetValue(target, out DateTime lastFailure))
+                DateTime lastFailure;
+                if (_blacklist.TryGetValue(target, out lastFailure))
                 {
                     // within blacklist period ?
                     if (now - lastFailure < ConsulConfig.BlacklistPeriod)
